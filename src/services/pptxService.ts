@@ -69,7 +69,14 @@ export const generatePowerPoint = async (slides: Slide[], theme: Theme, title: s
 };
 
 const addContentToSlide = (slide: any, content: string[], theme: Theme, position: { x: number, y: number, w: number, h: number }) => {
-  const bulletPoints = content.map(item => ({ text: item, options: { bullet: true } }));
+  // Create properly formatted bullet points for PowerPoint
+  const bulletPoints = content.map(item => ({
+    text: item,
+    options: {
+      bullet: { type: 'bullet', style: '•' },
+      indentLevel: 0
+    }
+  }));
   
   slide.addText(bulletPoints, {
     x: position.x,
@@ -79,9 +86,10 @@ const addContentToSlide = (slide: any, content: string[], theme: Theme, position
     fontSize: 16,
     fontFace: theme.typography.fontFamily.primary.split(',')[0],
     color: theme.colors.text.primary,
-    lineSpacing: 24,
+    lineSpacing: 32,
     align: 'left',
-    valign: 'top'
+    valign: 'top',
+    bullet: true
   });
 };
 
