@@ -1,3 +1,4 @@
+
 import PptxGenJS from 'pptxgenjs';
 import { Slide, Theme } from '@/types/presentation';
 
@@ -68,19 +69,37 @@ export const generatePowerPoint = async (slides: Slide[], theme: Theme, title: s
 };
 
 const addContentToSlide = (slide: any, content: string[], theme: Theme, position: { x: number, y: number, w: number, h: number }) => {
-  // Add each bullet point as a separate text element with proper bullet formatting
+  if (content.length === 0) return;
+  
+  // Calculate proper spacing based on content length
+  const lineHeight = 0.5; // Increased line height to prevent overlap
+  const startY = position.y;
+  const maxHeight = position.h;
+  const availableHeight = maxHeight - 0.2; // Leave some margin
+  
+  // Adjust line height if content is too long for the available space
+  const adjustedLineHeight = content.length > 0 ? Math.min(lineHeight, availableHeight / content.length) : lineHeight;
+  
+  // Add each bullet point with proper spacing
   content.forEach((item, index) => {
-    slide.addText(`• ${item}`, {
-      x: position.x,
-      y: position.y + (index * 0.4), // Space each bullet point vertically
-      w: position.w,
-      h: 0.4,
-      fontSize: 16,
-      fontFace: theme.typography.fontFamily.primary.split(',')[0],
-      color: theme.colors.text.primary,
-      align: 'left',
-      valign: 'top'
-    });
+    const yPosition = startY + (index * adjustedLineHeight);
+    
+    // Ensure we don't exceed the available space
+    if (yPosition + adjustedLineHeight <= startY + maxHeight) {
+      slide.addText(`• ${item}`, {
+        x: position.x,
+        y: yPosition,
+        w: position.w,
+        h: adjustedLineHeight,
+        fontSize: 16,
+        fontFace: theme.typography.fontFamily.primary.split(',')[0],
+        color: theme.colors.text.primary,
+        align: 'left',
+        valign: 'top',
+        wrap: true, // Enable text wrapping
+        margin: [0.1, 0.1, 0.1, 0.1] // Add margins to prevent overlap
+      });
+    }
   });
 };
 
