@@ -1,4 +1,3 @@
-
 import PptxGenJS from 'pptxgenjs';
 import { Slide, Theme } from '@/types/presentation';
 
@@ -69,27 +68,19 @@ export const generatePowerPoint = async (slides: Slide[], theme: Theme, title: s
 };
 
 const addContentToSlide = (slide: any, content: string[], theme: Theme, position: { x: number, y: number, w: number, h: number }) => {
-  // Create properly formatted bullet points for PowerPoint
-  const bulletPoints = content.map(item => ({
-    text: item,
-    options: {
-      bullet: { type: 'bullet', style: '•' },
-      indentLevel: 0
-    }
-  }));
-  
-  slide.addText(bulletPoints, {
-    x: position.x,
-    y: position.y,
-    w: position.w,
-    h: position.h,
-    fontSize: 16,
-    fontFace: theme.typography.fontFamily.primary.split(',')[0],
-    color: theme.colors.text.primary,
-    lineSpacing: 32,
-    align: 'left',
-    valign: 'top',
-    bullet: true
+  // Add each bullet point as a separate text element with proper bullet formatting
+  content.forEach((item, index) => {
+    slide.addText(`• ${item}`, {
+      x: position.x,
+      y: position.y + (index * 0.4), // Space each bullet point vertically
+      w: position.w,
+      h: 0.4,
+      fontSize: 16,
+      fontFace: theme.typography.fontFamily.primary.split(',')[0],
+      color: theme.colors.text.primary,
+      align: 'left',
+      valign: 'top'
+    });
   });
 };
 
