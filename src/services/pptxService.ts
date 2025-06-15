@@ -1,4 +1,3 @@
-
 import PptxGenJS from 'pptxgenjs';
 import { Slide, Theme } from '@/types/presentation';
 
@@ -28,7 +27,6 @@ export const generatePowerPoint = async (slides: Slide[], theme: Theme, title: s
       w: 9,
       h: 0.8,
       fontSize: 32,
-      fontFace: 'Arial', // Use consistent font
       color: theme.colors.primary,
       bold: true,
       align: 'left',
@@ -87,47 +85,33 @@ export const generatePowerPoint = async (slides: Slide[], theme: Theme, title: s
 const addContentToSlide = (slide: any, content: string[], theme: Theme, position: { x: number, y: number, w: number, h: number }, isFullWidth: boolean = false) => {
   if (content.length === 0) return;
   
-  // Calculate optimal spacing to match live preview
-  const baseLineHeight = isFullWidth ? 0.6 : 0.45;
-  const fontSize = isFullWidth ? 18 : 16;
-  const bulletIndent = 0.2;
+  const fontSize = isFullWidth ? 14 : 12;
+
+  // Create an array of text objects for granular control over formatting
+  const textObjects = content.map(item => ([
+    {
+      text: '• ',
+      options: {
+        fontSize: fontSize,
+        color: theme.colors.primary,
+        bold: true,
+      }
+    },
+    {
+      text: item + '\n',
+      options: {
+        fontSize: fontSize,
+        color: theme.colors.text.primary,
+      }
+    }
+  ])).flat();
   
-  // Ensure proper spacing without overlap
-  const totalContentHeight = content.length * baseLineHeight;
-  const adjustedLineHeight = totalContentHeight > position.h ? (position.h - 0.2) / content.length : baseLineHeight;
-  
-  // Add each bullet point with exact live preview styling
-  content.forEach((item, index) => {
-    const yPosition = position.y + (index * adjustedLineHeight);
-    
-    // Add bullet point
-    slide.addText('•', {
-      x: position.x,
-      y: yPosition,
-      w: bulletIndent,
-      h: adjustedLineHeight,
-      fontSize: fontSize,
-      fontFace: 'Arial',
-      color: theme.colors.primary, // Use primary color for bullets like live preview
-      align: 'left',
-      valign: 'top',
-      bold: true
-    });
-    
-    // Add content text
-    slide.addText(item, {
-      x: position.x + bulletIndent,
-      y: yPosition,
-      w: position.w - bulletIndent,
-      h: adjustedLineHeight,
-      fontSize: fontSize,
-      fontFace: 'Arial',
-      color: theme.colors.text.primary,
-      align: 'left',
-      valign: 'top',
-      wrap: true,
-      margin: [0.05, 0.05, 0.05, 0.05]
-    });
+  // Add all content in a single text box to allow pptxgenjs to handle wrapping and line spacing
+  slide.addText(textObjects, {
+    ...position,
+    valign: 'top',
+    wrap: true,
+    lineSpacing: fontSize * 2 // Use double spacing to prevent text overlap
   });
 };
 
