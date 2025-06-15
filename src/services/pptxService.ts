@@ -18,48 +18,64 @@ export const generatePowerPoint = async (slides: Slide[], theme: Theme, title: s
   for (const slide of slides) {
     const pptSlide = pptx.addSlide();
     
-    // Set slide background
+    // Set slide background to match live preview
     pptSlide.background = { color: theme.colors.background };
     
-    // Add slide title
+    // Add slide title with exact styling from live preview
     pptSlide.addText(slide.title, {
       x: 0.5,
-      y: 0.3,
+      y: 0.2,
       w: 9,
       h: 0.8,
-      fontSize: 28,
-      fontFace: theme.typography.fontFamily.heading.split(',')[0],
+      fontSize: 32,
+      fontFace: 'Arial', // Use consistent font
       color: theme.colors.primary,
       bold: true,
-      align: 'left'
+      align: 'left',
+      valign: 'top'
     });
 
-    // Handle different slide layouts based on content
-    if (slide.chart && slide.content.length > 0) {
-      // Chart + Content layout
-      await addChartToSlide(pptSlide, slide.chart, theme, { x: 5.2, y: 1.5, w: 4.3, h: 3.5 });
-      addContentToSlide(pptSlide, slide.content, theme, { x: 0.5, y: 1.5, w: 4.5, h: 3.5 });
-    } else if (slide.image?.url && slide.content.length > 0) {
-      // Image + Content layout
+    // Optimize layout based on content availability
+    const hasChart = slide.chart && slide.chart.data.length > 0;
+    const hasImage = slide.image?.url;
+    const hasContent = slide.content.length > 0;
+
+    if (hasChart && hasContent) {
+      // Chart + Content layout - optimize spacing
+      await addChartToSlide(pptSlide, slide.chart, theme, { x: 5, y: 1.2, w: 4.5, h: 3.8 });
+      addContentToSlide(pptSlide, slide.content, theme, { x: 0.5, y: 1.2, w: 4.2, h: 3.8 });
+    } else if (hasImage && hasContent) {
+      // Image + Content layout - optimize spacing
       try {
-        await addImageToSlide(pptSlide, slide.image.url, { x: 5.2, y: 1.5, w: 4.3, h: 3.5 });
+        await addImageToSlide(pptSlide, slide.image.url, { x: 5, y: 1.2, w: 4.5, h: 3.8 });
       } catch (error) {
         console.error('Error adding image to slide:', error);
       }
-      addContentToSlide(pptSlide, slide.content, theme, { x: 0.5, y: 1.5, w: 4.5, h: 3.5 });
-    } else if (slide.chart) {
-      // Chart only
-      await addChartToSlide(pptSlide, slide.chart, theme, { x: 1.5, y: 1.5, w: 7, h: 3.5 });
-    } else if (slide.image?.url) {
-      // Image only
+      addContentToSlide(pptSlide, slide.content, theme, { x: 0.5, y: 1.2, w: 4.2, h: 3.8 });
+    } else if (hasChart && !hasContent) {
+      // Chart only - center and make larger
+      await addChartToSlide(pptSlide, slide.chart, theme, { x: 1, y: 1.2, w: 8, h: 3.8 });
+    } else if (hasImage && !hasContent) {
+      // Image only - center and make larger
       try {
-        await addImageToSlide(pptSlide, slide.image.url, { x: 1.5, y: 1.5, w: 7, h: 3.5 });
+        await addImageToSlide(pptSlide, slide.image.url, { x: 1, y: 1.2, w: 8, h: 3.8 });
       } catch (error) {
         console.error('Error adding image to slide:', error);
       }
-    } else {
-      // Content only
-      addContentToSlide(pptSlide, slide.content, theme, { x: 0.5, y: 1.5, w: 9, h: 3.5 });
+    } else if (hasContent && !hasChart && !hasImage) {
+      // Content only - use two columns to fill space better
+      const midPoint = Math.ceil(slide.content.length / 2);
+      const firstColumn = slide.content.slice(0, midPoint);
+      const secondColumn = slide.content.slice(midPoint);
+      
+      if (slide.content.length > 6) {
+        // Use two columns for better space utilization
+        addContentToSlide(pptSlide, firstColumn, theme, { x: 0.5, y: 1.2, w: 4.2, h: 3.8 });
+        addContentToSlide(pptSlide, secondColumn, theme, { x: 5, y: 1.2, w: 4.2, h: 3.8 });
+      } else {
+        // Single column with larger text for fewer items
+        addContentToSlide(pptSlide, slide.content, theme, { x: 0.5, y: 1.2, w: 9, h: 3.8 }, true);
+      }
     }
   }
 
@@ -68,38 +84,50 @@ export const generatePowerPoint = async (slides: Slide[], theme: Theme, title: s
   await pptx.writeFile({ fileName });
 };
 
-const addContentToSlide = (slide: any, content: string[], theme: Theme, position: { x: number, y: number, w: number, h: number }) => {
+const addContentToSlide = (slide: any, content: string[], theme: Theme, position: { x: number, y: number, w: number, h: number }, isFullWidth: boolean = false) => {
   if (content.length === 0) return;
   
-  // Calculate proper spacing based on content length
-  const lineHeight = 0.5; // Increased line height to prevent overlap
-  const startY = position.y;
-  const maxHeight = position.h;
-  const availableHeight = maxHeight - 0.2; // Leave some margin
+  // Calculate optimal spacing to match live preview
+  const baseLineHeight = isFullWidth ? 0.6 : 0.45;
+  const fontSize = isFullWidth ? 18 : 16;
+  const bulletIndent = 0.2;
   
-  // Adjust line height if content is too long for the available space
-  const adjustedLineHeight = content.length > 0 ? Math.min(lineHeight, availableHeight / content.length) : lineHeight;
+  // Ensure proper spacing without overlap
+  const totalContentHeight = content.length * baseLineHeight;
+  const adjustedLineHeight = totalContentHeight > position.h ? (position.h - 0.2) / content.length : baseLineHeight;
   
-  // Add each bullet point with proper spacing
+  // Add each bullet point with exact live preview styling
   content.forEach((item, index) => {
-    const yPosition = startY + (index * adjustedLineHeight);
+    const yPosition = position.y + (index * adjustedLineHeight);
     
-    // Ensure we don't exceed the available space
-    if (yPosition + adjustedLineHeight <= startY + maxHeight) {
-      slide.addText(`• ${item}`, {
-        x: position.x,
-        y: yPosition,
-        w: position.w,
-        h: adjustedLineHeight,
-        fontSize: 16,
-        fontFace: theme.typography.fontFamily.primary.split(',')[0],
-        color: theme.colors.text.primary,
-        align: 'left',
-        valign: 'top',
-        wrap: true, // Enable text wrapping
-        margin: [0.1, 0.1, 0.1, 0.1] // Add margins to prevent overlap
-      });
-    }
+    // Add bullet point
+    slide.addText('•', {
+      x: position.x,
+      y: yPosition,
+      w: bulletIndent,
+      h: adjustedLineHeight,
+      fontSize: fontSize,
+      fontFace: 'Arial',
+      color: theme.colors.primary, // Use primary color for bullets like live preview
+      align: 'left',
+      valign: 'top',
+      bold: true
+    });
+    
+    // Add content text
+    slide.addText(item, {
+      x: position.x + bulletIndent,
+      y: yPosition,
+      w: position.w - bulletIndent,
+      h: adjustedLineHeight,
+      fontSize: fontSize,
+      fontFace: 'Arial',
+      color: theme.colors.text.primary,
+      align: 'left',
+      valign: 'top',
+      wrap: true,
+      margin: [0.05, 0.05, 0.05, 0.05]
+    });
   });
 };
 
@@ -117,21 +145,31 @@ const addChartToSlide = async (slide: any, chart: NonNullable<Slide['chart']>, t
     h: position.h,
     showTitle: false,
     showLegend: true,
-    legendPos: 'b',
+    legendPos: 'b' as const,
     showValue: true,
     dataLabelColor: theme.colors.text.primary,
-    dataLabelFontSize: 12
+    dataLabelFontSize: 12,
+    border: { pt: 1, color: theme.colors.primary }
   };
+
+  const chartColors = [
+    theme.colors.primary, 
+    theme.colors.secondary, 
+    theme.colors.status.success, 
+    theme.colors.status.warning,
+    theme.colors.status.error,
+    theme.colors.status.info
+  ];
 
   switch (chart.type) {
     case 'bar':
       slide.addChart('bar', chartData, {
         ...chartOptions,
-        barDir: 'col',
-        barGrouping: 'clustered',
+        barDir: 'col' as const,
+        barGrouping: 'clustered' as const,
         catAxisLabelColor: theme.colors.text.secondary,
         valAxisLabelColor: theme.colors.text.secondary,
-        chartColors: [theme.colors.primary, theme.colors.secondary, theme.colors.status.success, theme.colors.status.warning]
+        chartColors: chartColors
       });
       break;
     
@@ -146,7 +184,7 @@ const addChartToSlide = async (slide: any, chart: NonNullable<Slide['chart']>, t
     case 'pie':
       slide.addChart('pie', chartData, {
         ...chartOptions,
-        chartColors: [theme.colors.primary, theme.colors.secondary, theme.colors.status.success, theme.colors.status.warning, theme.colors.status.error, theme.colors.status.info]
+        chartColors: chartColors
       });
       break;
   }
@@ -168,7 +206,8 @@ const addImageToSlide = async (slide: any, imageUrl: string, position: { x: numb
             y: position.y,
             w: position.w,
             h: position.h,
-            sizing: { type: 'cover', w: position.w, h: position.h }
+            sizing: { type: 'cover', w: position.w, h: position.h },
+            rounding: true
           });
           resolve(true);
         } catch (error) {
