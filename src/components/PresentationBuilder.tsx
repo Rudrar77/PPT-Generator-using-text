@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Slide, Theme, Presentation } from '@/types/presentation';
 import { PROFESSIONAL_THEMES } from '@/data/themes';
 import { parseSlideContent, generateSlideContent } from '@/utils/slideParser';
 import { analyzeContent } from '@/services/aiService';
 import { searchImages, getImageForKeyword, extractImageKeywords } from '@/services/imageService';
+import { generatePowerPoint } from '@/services/pptxService';
 import { ThemeSelector } from './ThemeSelector';
 import { SlideViewer } from './SlideViewer';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export const PresentationBuilder = () => {
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [showFullscreenViewer, setShowFullscreenViewer] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('input');
 
@@ -162,8 +163,23 @@ image: team collaboration`;
     toast.success('Sample content loaded!');
   };
 
-  const handleExportPDF = () => {
-    toast.info('PDF export feature coming soon!');
+  const handleExportPDF = async () => {
+    if (slides.length === 0) {
+      toast.error('No slides to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const presentationTitle = slides[0]?.title || 'Presentation';
+      await generatePowerPoint(slides, selectedTheme, presentationTitle);
+      toast.success('PowerPoint presentation downloaded successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export presentation');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleShare = () => {
@@ -204,9 +220,18 @@ image: team collaboration`;
                     <Maximize className="w-4 h-4 mr-2" />
                     Present
                   </Button>
-                  <Button onClick={handleExportPDF} variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
+                  <Button 
+                    onClick={handleExportPDF} 
+                    variant="outline" 
+                    size="sm"
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    {isExporting ? 'Exporting...' : 'Download PPT'}
                   </Button>
                   <Button onClick={handleShare} variant="outline" size="sm">
                     <Share className="w-4 h-4 mr-2" />
