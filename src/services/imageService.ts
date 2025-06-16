@@ -1,5 +1,5 @@
 
-const PEXELS_API_KEY = "7nWeTBCEvqoK4csY0XTP1KMPlRiOFasFTdDsCteg8de1x0bNwi9jhJzX";
+const PEXELS_API_KEY = "YOUR_API_KEY";
 
 export interface PexelsImage {
   id: number;
